@@ -1,0 +1,120 @@
+from flask import Flask, request, jsonify  # Importing necessary modules from Flask
+from flask_sqlalchemy import SQLAlchemy  # Importing SQLAlchemy for database interactions
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity  # Importing JWT utilities
+
+# Initialize the Flask application
+app = Flask(__name__)
+
+# Configure the database URI and JWT secret key
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'  # Using SQLite for the database
+app.config['JWT_SECRET_KEY'] = 'super-secret'  # Secret key for encoding JWT tokens
+
+# Initialize the database and JWT manager
+db = SQLAlchemy(app)
+jwt = JWTManager(app)
+
+# Define the User model
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)  # Primary key for the user
+    name = db.Column(db.String(100), nullable=False)  # User's name
+    mobile_number = db.Column(db.String(20), unique=True, nullable=False)  # Unique mobile number
+
+# Define the Item model
+class Item(db.Model):
+    id = db.Column(db.Integer, primary_key=True)  # Primary key for the item
+    name = db.Column(db.String(100), nullable=False)  # Item's name
+    description = db.Column(db.Text, nullable=False)  # Item's description
+
+# Route for user signup
+@app.route('/signup', methods=['POST'])
+def signup():
+    try:
+        data = request.get_json()  # Get JSON data from the request
+        user = User(name=data['name'], mobile_number=data['mobile_number'])  # Create a new user
+        db.session.add(user)  # Add the user to the session
+        db.session.commit()  # Commit the session to save the user
+        return jsonify({'message': 'User  created successfully'}), 201  # Return success message
+    except Exception as e:
+        db.session.rollback()  # Rollback the session in case of error
+        return jsonify({'message': str(e)}), 500  # Return error message
+
+# Route for user login
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()  # Get JSON data from the request
+    user = User.query.filter_by(mobile_number=data['mobile_number']).first()  # Find user by mobile number
+    if user:
+        access_token = create_access_token(identity=user.id)  # Create JWT access token
+        return jsonify({'access_token': access_token}), 200  # Return the access token
+    return jsonify({'message': 'Invalid mobile number'}), 401  # Return error if user not found
+
+# Route for creating a new item
+@app.route('/items', methods=['POST'])
+@jwt_required  # Protect this route with JWT authentication
+def create_item():
+    data = request.get_json()  # Get JSON data from the request
+    item = Item(name=data['name'], description=data['description'])  # Create a new item
+    db.session.add(item)  # Add the item to the session
+    db.session.commit()  # Commit the session to save the item
+    return jsonify({'message': 'Item created successfully'}), 201  # Return success message
+
+# Route for getting all items
+@app.route('/items', methods=['GET'])
+@jwt_required  # Protect this route with JWT authentication
+def get_items():
+    items = Item.query.all()  # Query all items from the database
+    return jsonify([{'id': item.id, 'name': item.name, 'description': item.description} for item in items]), 200  # Return items as JSON
+
+# Route for getting a specific item by ID
+@app.route('/items/<int:item_id>', methods=['GET'])
+@jwt_required  # Protect this route with JWT authentication
+def get_item(item_id):
+    item = Item.query.get(item_id)  # Get the item by ID
+    if item:
+        return jsonify({'id': item.id, 'name': item.name, 'description': item.description}), 200  # Return item details
+    return jsonify({'message': 'Item not found'}), 404  # Return error if item not found
+
+# Route for updating an item by ID
+@app.route('/items/<int:item_id>', methods=['PUT'])
+@jwt_required  # Protect this route with JWT authentication
+def update_item(item_id):
+    item = Item.query.get(item_id)  # Get the item by ID
+    if item:
+        data = request.get_json()  # Get JSON data from the request
+        item.name = data['name']  # Update item name
+        item.description = data['description']  # Update item description
+        db.session.commit()  # Commit the session to save changes
+        return jsonify
+
+output:
+1.user singup
+POST /signup
+Content-Type: application/json
+{
+    "name": "John Doe",
+    "mobile_number": "1234567890"}
+2. user login
+POST /login
+Content-Type: application/json
+{
+    "mobile_number": "1234567890"
+}
+3. Create Item
+POST /items
+Authorization: Bearer your_jwt_token_here
+Content-Type: application/json
+{
+    "name": "Sample Item",
+    "description": "This is a sample item."
+}
+4. Update Team
+PUT /items/1
+Authorization: Bearer your_jwt_token_here
+Content-Type: application/json
+{
+    "name": "Updated Item",
+    "description": "This is an updated item."
+}
+5. Delete Item
+DELETE /items/1
+Authorization: Bearer your_jwt_token_here
