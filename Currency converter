@@ -1,0 +1,65 @@
+import requests  # Importing the requests library to make HTTP requests
+
+class CurrencyConverter:
+    def __init__(self, api_key):
+        self.api_key = api_key  # Store the API key for accessing the currency conversion API
+        self.base_url = "https://v6.exchangerate-api.com/v6"  # Base URL for the API
+
+    def fetch_conversion_rate(self, source_currency, target_currency):
+        """Fetch the conversion rate from the API."""
+        # Construct the URL for fetching the conversion rate
+        url = f"{self.base_url}/{self.api_key}/pair/{source_currency}/{target_currency}"
+        try:
+            response = requests.get(url)  # Make a GET request to the API
+            response.raise_for_status()  # Raise an error for bad responses (4xx, 5xx)
+            data = response.json()  # Parse the JSON response
+            if data.get("result") == "success":  # Check if the API call was successful
+                return data.get("conversion_rate")  # Return the conversion rate
+            else:
+                print(f"Error: {data.get('error-type')}")  # Print error type if not successful
+                return None
+        except requests.exceptions.RequestException as e:
+            print(f"Network error: {e}")  # Print network error if the request fails
+            return None
+
+    def convert_currency(self, amount, source_currency, target_currency):
+        """Convert the amount from source currency to target currency."""
+        # Check if the amount is a valid positive number
+        if not isinstance(amount, (int, float)) or amount < 0:
+            print("Error: Invalid amount. Please enter a positive number.")
+            return None
+
+        # Fetch the conversion rate
+        conversion_rate = self.fetch_conversion_rate(source_currency, target_currency)
+        if conversion_rate is not None:  # If the conversion rate was fetched successfully
+            converted_amount = amount * conversion_rate  # Calculate the converted amount
+            return converted_amount  # Return the converted amount
+        else:
+            return None  # Return None if conversion rate fetching failed
+
+def main():
+    # Replace 'YOUR_API_KEY' with your actual API key
+    api_key = "YOUR_API_KEY"  # API key for the currency conversion service
+    converter = CurrencyConverter(api_key)  # Create an instance of the CurrencyConverter class
+
+    # Input from the user
+    try:
+        amount = float(input("Enter the amount to convert: "))  # Get the amount to convert from the user
+        source_currency = input("Enter the source currency (e.g., USD): ").upper()  # Get the source currency
+        target_currency = input("Enter the target currency (e.g., EUR): ").upper()  # Get the target currency
+
+        # Perform the conversion
+        converted_amount = converter.convert_currency(amount, source_currency, target_currency)
+        if converted_amount is not None:  # If conversion was successful
+            print(f"{amount} {source_currency} = {converted_amount:.2f} {target_currency}")  # Print the result
+        else:
+            print("Conversion failed. Please check your inputs or try again later.")  # Handle conversion failure
+    except ValueError:
+        print("Error: Invalid input. Please enter a valid number for the amount.")  # Handle invalid input
+
+# Entry point of the program
+if __name__ == "__main__":
+    main()  # Call the main function to run the program
+
+output:
+100 USD = 85.50 EUR
